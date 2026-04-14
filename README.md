@@ -1,286 +1,239 @@
 # Slogan Effectiveness Analyzer
 
-> A comprehensive Python framework for analyzing and scoring marketing slogans using NLP, sentiment analysis, and machine learning.
+> A Python framework for analyzing and scoring marketing slogans using NLP, sentiment analysis, and unsupervised machine learning.
 
-## 📋 Overview
+## Overview
 
-This project provides a data-driven approach to analyze marketing slogans across 9 quantitative dimensions:
+This project provides a data-driven approach to analyze marketing slogans across 6 quantitative dimensions, producing a composite effectiveness score and thematic clustering across 19 industries.
 
-1. **Sentiment Analysis** (VADER) - Emotional tone and positivity
-2. **Length Optimization** - Adherence to marketing best practices (3-6 words)
-3. **Memorability** - Alliteration, rhyme, and rhythm detection
-4. **Emotional Impact** - Sentiment intensity × subjectivity
-5. **Action Verbs** - Presence of powerful call-to-action verbs
-6. **Personal Engagement** - Use of "you/your" or "we/our"
-7. **Originality** - Detection of marketing clichés
-8. **Thematic Clustering** - TF-IDF + K-Means grouping
-9. **Composite Effectiveness Score** - Weighted aggregate (0-10)
+**Dataset:** 3,239 unique slogans scraped from sloganlist.com. Categories with fewer than 30 slogans are excluded from cross-industry comparisons to avoid statistically unreliable results.
 
-**Dataset:** 3,338 unique slogans across 19 industries scraped from sloganlist.com
+### Scoring dimensions
 
-## 🚀 Quick Start
+| Dimension | Weight | Description |
+|-----------|--------|-------------|
+| **Memorability** | 25% | Alliteration, rhyme, syllabic rhythm, word repetition |
+| **Emotion** | 20% | Sentiment intensity × subjectivity (VADER + TextBlob) |
+| **Length** | 15% | Optimal range: 3–6 words, 20–40 characters |
+| **Action** | 15% | Presence and position of power verbs (imperative form) |
+| **Originality** | 15% | Penalty system for corporate buzzwords and clichés |
+| **Personal Engagement** | 10% | Use of "you/your" or "we/our" |
+
+Thematic clustering (TF-IDF + K-Means, 10 groups) is computed separately and does not affect the composite score.
+
+---
+
+## Quick Start
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/slogan-analyzer.git
+git clone https://github.com/FoulquesA/slogan-analyzer.git
 cd slogan-analyzer
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Download spaCy model
-python -m spacy download en_core_web_sm
+python3 -m spacy download en_core_web_sm
 ```
 
-### Basic Usage
+### Run the analysis
 
 ```python
-from slogan_analyzer import analyze_slogans
-
-# Run full analysis pipeline
+# scrape_new_data=False loads the existing all_slogans.csv — skip the scraping
 df = analyze_slogans(
-    scrape_new_data=False,  # Use existing data
+    scrape_new_data=False,
     data_path='all_slogans.csv',
-    output_path='slogans_analyzed.csv'
+    output_path='slogans_analyzed.csv',
+    visual_path='slogan_analysis_visuals.png',
 )
-
-# View top 10 slogans
-print(df.nlargest(10, 'effectiveness_score')[
-    ['Company', 'Slogan', 'effectiveness_score']
-])
 ```
 
-### Analyze a Single Slogan
+### Score a single slogan
 
 ```python
-from slogan_analyzer import (
-    score_length, score_memorability, score_originality
-)
+from slogan_analyzer import score_length, score_memorability, score_originality
 
 slogan = "Just Do It"
 
-print(f"Length: {score_length(slogan)}/10")
+print(f"Length:       {score_length(slogan)}/10")
 print(f"Memorability: {score_memorability(slogan)}/10")
-print(f"Originality: {score_originality(slogan)}/10")
+print(f"Originality:  {score_originality(slogan)}/10")
 ```
 
-## 📊 Key Features
+---
 
-### 1. Sentiment Analysis (VADER)
-- **Compound score** normalized between -1 (negative) and +1 (positive)
-- Classification: Positive (≥0.05), Neutral, Negative (≤-0.05)
-- **Subjectivity** measurement via TextBlob (0=factual, 1=subjective)
+## Key Features
 
-### 2. Effectiveness Scoring System
-Each slogan receives scores (0-10) across 6 dimensions:
+### Cliché detection
+Automatically flags 20+ overused marketing terms with weighted penalties:
+- **Heavy penalty (3pts):** best, ultimate, innovative, revolutionary, solutions, world-class, leader, trusted, quality
+- **Moderate penalty (2pts):** premium, superior, advanced, value, unique, authentic, expert
+- **Light penalty (1pt):** international, experience
 
-| Dimension | Weight | Description |
-|-----------|--------|-------------|
-| **Memorability** | 25% | Alliteration, rhyme, rhythm, repetition |
-| **Emotion** | 20% | Sentiment intensity × subjectivity |
-| **Length** | 15% | Optimal: 3-6 words, 20-40 characters |
-| **Action** | 15% | Presence of power verbs (make, create, discover) |
-| **Originality** | 15% | Penalty for 45+ marketing clichés |
-| **Personal** | 10% | Use of "you/your" or "we/our" |
+Terms like "love", "good", or "new" are intentionally excluded — they are common in effective slogans and carry no meaningful signal for cliché detection.
 
-### 3. Cliché Detection
-Automatically detects 45+ overused marketing terms:
-- **Superlatives:** best, ultimate, perfect, premier
-- **Innovation buzzwords:** innovative, revolutionary, cutting-edge
-- **Business speak:** solutions, trusted, leader, world-class
+### Statistical reliability flag
+Each row includes `cat_reliable` (True/False). Categories with fewer than 30 slogans are flagged and excluded from cross-industry comparisons. Affected categories in this dataset: health-medicine (n=5), campaign (n=11), education (n=14).
 
-### 4. Thematic Clustering
-- **TF-IDF vectorization** (100 features, bi-grams)
-- **K-Means clustering** (10 thematic groups)
-- Automatic title assignment (e.g., "Innovation & Novelty", "Taste & Freshness")
+### Thematic clustering
+TF-IDF vectorization (100 features, bi-grams, min_df=5) followed by K-Means (10 clusters). Results are stored in `theme_cluster` and `theme_keywords` columns. Cluster labels are keyword-based, not manually assigned.
 
-## 📈 Sample Output
+---
+
+## Sample Output
 
 ```
-================================================================================
-📊 SLOGAN EFFECTIVENESS ANALYSIS - SUMMARY REPORT
-================================================================================
+========================================================================
+  RAPPORT D'ANALYSE — SLOGAN EFFECTIVENESS
+========================================================================
 
-📈 DATASET OVERVIEW
-  Total slogans analyzed: 3,338
-  Number of categories: 19
+  DATASET
+  Total slogans analysés  : 3,239
+  Catégories fiables (≥30) : 16
+  Score moyen global       : 4.72 / 10
+  Médiane                  : 4.60 / 10
+  Slogans "Excellent" (≥8) : 13 (0.4%)
 
-⭐ EFFECTIVENESS SCORES
-  Average score: 5.23/10
-  Median score: 5.10/10
-  Excellent slogans (≥8/10): 127 (3.8%)
+  DISTRIBUTION DU SENTIMENT
+  Positive  : 39.7%
+  Neutral   : 56.1%
+  Negative  :  4.2%
 
-💭 SENTIMENT DISTRIBUTION
-  Positive: 39.7%
-  Neutral: 56.1%
-  Negative: 4.2%
-
-================================================================================
-🏆 TOP 10 MOST EFFECTIVE SLOGANS
-================================================================================
-
-8.75/10 - Nike
-  "Just Do It"
-  Category: sports-games-slogans
-
-8.50/10 - Apple
-  "Think Different"
-  Category: technology-slogans
+========================================================================
+  TOP 10 SLOGANS
+========================================================================
+  8.78  Dettol               "We Protect What We Love"
+  8.76  Cornetto             "Enjoy the ride, love the ending"
+  8.76  Estee Lauder         "Enjoy the stay. Love the shine."
+  8.66  Mahindra Scorpio     "Live Young Live Free"
+  8.64  eBay                 "Buy it. Sell it. Love it."
 ```
 
-## 🔬 Methodology
+---
 
-### Data Collection
-- **Source:** Web scraping from [sloganlist.com](https://www.sloganlist.com)
-- **Technique:** BeautifulSoup4 for HTML parsing
-- **Coverage:** 19 industry categories
-- **Deduplication:** Automatic removal of duplicate entries
+## Methodology
 
-### Analysis Pipeline
-1. **Data Cleaning** - Remove NaN, ensure string types
-2. **Basic Metrics** - Calculate character/word counts
-3. **Sentiment Analysis** - VADER + TextBlob
-4. **Effectiveness Scoring** - 6 independent scores
-5. **Cliché Detection** - Pattern matching with penalty system
-6. **Thematic Clustering** - TF-IDF + K-Means
-7. **Composite Score** - Weighted average
-8. **Report Generation** - Statistics + top/bottom slogans
+### Data collection
+- **Source:** sloganlist.com via BeautifulSoup4
+- **Coverage:** 19 industry categories, all paginated pages
+- **Deduplication:** automatic on Company + Slogan pair
+
+### Analysis pipeline
+1. Scraping and deduplication
+2. Data cleaning — NaN removal, string normalization
+3. Basic metrics — word count, character count
+4. Sentiment analysis — VADER compound score + TextBlob subjectivity
+5. Six independent scores computed per slogan
+6. Cliché detection — pattern matching with weighted penalty
+7. Composite score — weighted average, clipped to 0–10
+8. Thematic clustering — TF-IDF + K-Means
+9. Report generation and visualizations
 
 ### Technologies
-- **pandas** - Data manipulation
-- **spaCy** - NLP (POS tagging for verb detection)
-- **VADER** - Sentiment analysis optimized for short text
-- **TextBlob** - Subjectivity measurement
-- **scikit-learn** - TF-IDF vectorization + K-Means clustering
-- **BeautifulSoup4** - Web scraping
+- **pandas / numpy** — data manipulation
+- **spaCy** — POS tagging for verb detection
+- **VADER** — sentiment analysis optimized for short text
+- **TextBlob** — subjectivity scoring
+- **scikit-learn** — TF-IDF vectorization + K-Means clustering
+- **BeautifulSoup4** — web scraping
+- **matplotlib / adjustText** — visualizations
 
-## 📊 Key Insights
+---
 
-### Industry Patterns
+## Key Insights
 
-**Most Creative** (high originality):
-- Sports & Games
-- Food & Restaurants
-- Cosmetics
+### Industry patterns
 
-**Most Clichéd** (low originality):
-- Business slogans
-- Financial services
-- Technology
+**Most emotional** (avg emotion score):
+- Cosmetics (3.43)
+- Restaurants (3.25)
+- Household products (3.22)
 
-**Most Emotional**:
-- Cosmetics (3.43/10)
-- Restaurants (3.25/10)
-- Household products (3.22/10)
+**Most factual** (highest % neutral sentiment):
+- Television channels (86% neutral)
+- Sports & Games (65% neutral)
+- Financial services (64% neutral)
 
-**Most Factual**:
-- Television channels (0.88/10)
-- Automotive (1.84/10)
-- Financial services (2.05/10)
+**Most clichéd** (highest cliché rate):
+- Company slogans (9.1%)
+- Financial services (8.6%)
+- Household products (8.4%)
 
-### Effectiveness Formula
+**Most original** (zero clichés):
+- Sports & Games (0%)
+- Cosmetics (2%)
+- Television channels (2%)
 
-**Characteristics of high-scoring slogans:**
-- 3-6 words (optimal length)
-- Alliteration or rhyme (memorability)
-- Positive sentiment (not excessive)
-- Action verb in imperative form
-- Zero marketing clichés
-- Simple, concrete vocabulary
+### What the model measures — and what it doesn't
 
-**Examples:**
-- "Just Do It" (Nike) - 
-- "Think Different" (Apple) - 
-- "I'm Lovin' It" (McDonald's) - 
+The top-scoring slogans (Dettol, Cornetto, Estée Lauder) score highly because they stack structural signals: rhyme, rhythm, personal pronouns, action verbs, no buzzwords. They are formally correct slogans.
 
-## 🛠️ Advanced Usage
+Culturally durable slogans like "Just Do It" (Nike) or "Think Different" (Apple) score lower because they violate at least one conventional rule — too short, grammatically incorrect, no personal pronoun. This is a known limitation of rule-based NLP scoring: it measures conformity to formal criteria, not cultural distinctiveness. The two things are often in tension in effective marketing.
 
-### Custom Weighting
+Slogans without clichés score on average 0.26 points higher than those containing them (4.74 vs 4.48), which is consistent but modest — the originality dimension alone does not drive the composite.
+
+---
+
+## Advanced Usage
+
+### Custom weighting
 
 ```python
-from slogan_analyzer import calculate_effectiveness_score
-
-# Define custom weights (must sum to 1.0)
 custom_weights = {
-    'score_length': 0.10,
-    'score_memorability': 0.35,  # Prioritize memorability
-    'score_emotion': 0.15,
-    'score_action': 0.10,
-    'score_originality': 0.25,   # Heavily penalize clichés
-    'score_personal': 0.05
+    'score_length':       0.10,
+    'score_memorability': 0.35,
+    'score_emotion':      0.15,
+    'score_action':       0.10,
+    'score_originality':  0.25,
+    'score_personal':     0.05,
 }
 
-df = calculate_effectiveness_score(df, weights=custom_weights)
+df = add_effectiveness_score(df)  # uses WEIGHTS dict defined at top of file
 ```
 
-### Filter by Category
+Modify the `WEIGHTS` constant directly at the top of the script to apply globally.
+
+### Filter by category
 
 ```python
-# Analyze only technology slogans
-tech_slogans = df[df['Category'] == 'technology-slogans']
-
-print("Tech Industry Statistics:")
-print(f"Average effectiveness: {tech_slogans['effectiveness_score'].mean():.2f}")
-print(f"Top clichés: {tech_slogans['cliches_detected'].explode().value_counts().head(5)}")
+tech = df[df['Category'] == 'technology-slogans']
+print(f"Average effectiveness: {tech['effectiveness_score'].mean():.2f}")
 ```
 
-### Export Results
+### Export
 
 ```python
-# Save top 100 slogans
-top_100 = df.nlargest(100, 'effectiveness_score')
-top_100.to_csv('top_100_slogans.csv', index=False)
+# Top 100
+df.nlargest(100, 'effectiveness_score').to_csv('top_100_slogans.csv', index=False)
 
-# Export by category
-for category in df['Category'].unique():
-    cat_df = df[df['Category'] == category]
-    cat_df.to_csv(f'slogans_{category}.csv', index=False)
+# By category
+for cat in df['Category'].unique():
+    df[df['Category'] == cat].to_csv(f'slogans_{cat}.csv', index=False)
 ```
 
-## 🔮 Future Enhancements
+---
 
-- [ ] **Temporal Analysis** - Track slogan trends over time
-- [ ] **Performance Correlation** - Link to actual brand success metrics
-- [ ] **Deep Learning** - BERT-based semantic similarity
-- [ ] **Multilingual Support** - Analyze non-English slogans
-- [ ] **API Endpoint** - Real-time slogan scoring service
-- [ ] **Interactive Dashboard** - Streamlit/Dash visualization
-- [ ] **Slogan Generator** - GPT-based creative generation
+## Future Enhancements
 
-## 📚 Documentation
+- [ ] External validation — correlate scores with consumer recall or brand tracking data
+- [ ] Empirical weighting — calibrate composite weights on real performance data rather than assumed values
+- [ ] Temporal analysis — track how slogan patterns shift by decade or campaign cycle
+- [ ] BERT-based scoring — replace rule-based memorability with semantic similarity
+- [ ] Multilingual support — extend pipeline to French, Spanish, German
+- [ ] Interactive dashboard — Streamlit interface for real-time slogan scoring
 
-- **[VADER Technical Docs](docs/VADER_Documentation.md)** - How VADER analyzes sentiment
-- **[Full Analysis Report](docs/analysis_summary.md)** - Complete insights & patterns
-- **[API Reference](#)** - Function documentation (coming soon)
-
-## 🤝 Contributing
-
-Contributions welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-**Code Style:** PEP 8 compliance required. Use `black` for formatting.
+---
 
 ## Author
 
-**Foulques Arbaretier**
-- Data Analyst
-- Master's in Marketing Insight & Data Analytics Strategy (Paris School of Business)
-- LinkedIn: [https://www.linkedin.com/in/foulques-arbaretier/]
-- Portfolio: [https://github.com/FoulquesA]
+**Foulques Arbaretier** — Data Analyst  
+Master's in Marketing Insight & Data Analytics Strategy, Paris School of Business  
+[LinkedIn](https://www.linkedin.com/in/foulques-arbaretier/) · [GitHub](https://github.com/FoulquesA)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [VADER Sentiment Analysis](https://github.com/cjhutto/vaderSentiment) by C.J. Hutto & Eric Gilbert
-- [SloganList.com](https://www.sloganlist.com) for the slogan data
-- spaCy, scikit-learn, and pandas communities
+- [SloganList.com](https://www.sloganlist.com) for the dataset
+- spaCy, scikit-learn, pandas, and matplotlib communities
